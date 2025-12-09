@@ -298,21 +298,6 @@ function calculateAdvancedConfidence(features, baseScore) {
 }
 
 // ============================================
-// ENHANCED RISK SCORING (THREAT ASSESSMENT)
-// ============================================
-
-    // ========== FEATURE 10: Subdomain Analysis ==========
-    const domainParts = domain.split('.');
-    const subdomainScore = domainParts.length > 4 ? 0.15 : 
-                          domainParts.length > 3 ? 0.08 : 0;
-
-    // ========== FEATURE 11: Directory Depth ==========
-    const pathParts = pathname.split('/').filter(p => p.length > 0);
-    const depthScore = pathParts.length > 5 ? 0.12 : 0;
-
-    // ========== FEATURE 12: Parameter Analysis ==========
-    const hasQueryParams = urlObj.search.length > 10;
-// ============================================
 // THREAT ASSESSMENT WITH DETAILED ANALYSIS
 // ============================================
 
@@ -502,114 +487,6 @@ async function calculateRiskScore(url) {
       verdict: 'medium',
       verdictEmoji: '🟡',
       explanations: ['⚠️ Analysis error - Please try again']
-    };
-  }
-}
-      riskScore = Math.min(riskScore + 15, 100);
-    } else if (confidence === 'high') {
-      riskScore = Math.min(riskScore + 10, 100);
-    } else if (confidence === 'very-low') {
-      riskScore = Math.max(riskScore - 10, 0);
-    }
-
-    // ========== VERDICT ASSIGNMENT (Improved Thresholds) ==========
-    let verdict = 'low';
-    let verdictEmoji = '🟢';
-    
-    if (riskScore >= 65) {
-      verdict = 'high';
-      verdictEmoji = '🔴';
-    } else if (riskScore >= 40) {
-      verdict = 'medium';
-      verdictEmoji = '🟡';
-    }
-
-    // ========== BUILD DETAILED EXPLANATIONS ==========
-    const explanations = [];
-    
-    // Security issues
-    if (!analysisFeatures.hasHTTPS) {
-      explanations.push('⚠️ No HTTPS encryption (unsecure connection)');
-    } else {
-      explanations.push('✓ HTTPS secure connection verified');
-    }
-
-    // Phishing indicators
-    if ((analysisFeatures.phishingIndicators || 0) > 0) {
-      explanations.push(`🎣 Contains ${analysisFeatures.phishingIndicators} phishing indicator(s)`);
-    }
-
-    // Suspicious keywords
-    if ((analysisFeatures.highRiskKeywords || 0) > 0) {
-      explanations.push(`🚩 Contains ${analysisFeatures.highRiskKeywords} suspicious keyword(s)`);
-    }
-
-    // Domain issues
-    if (analysisFeatures.isIPAddress) {
-      explanations.push('📍 Uses IP address instead of domain name');
-    }
-
-    if (analysisFeatures.isHomograph) {
-      explanations.push('🔤 Potential lookalike domain (homograph attack)');
-    }
-
-    if (analysisFeatures.hasRedirect) {
-      explanations.push('🔗 Uses URL shortener service (conceals destination)');
-    }
-
-    // Structure issues
-    if ((analysisFeatures.specialCharCount || 0) > 5) {
-      explanations.push(`🔤 Unusual number of special characters (${analysisFeatures.specialCharCount})`);
-    }
-
-    if (analysisFeatures.subdomainCount > 4) {
-      explanations.push(`📎 Excessive subdomains (${analysisFeatures.subdomainCount} levels)`);
-    }
-
-    if ((analysisFeatures.pathDepth || 0) > 5) {
-      explanations.push(`📂 Deep URL path with multiple directories`);
-    }
-
-    // Add summary if no issues found
-    if (explanations.length === 1) {
-      explanations.push('✅ No significant security red flags detected');
-    }
-
-    // Add confidence statement
-    const confidenceMap = {
-      'very-high': '(Very High Confidence)',
-      'high': '(High Confidence)',
-      'medium': '(Medium Confidence)',
-      'low': '(Low Confidence)',
-      'very-low': '(Low Confidence)'
-    };
-    
-    explanations.push(`Assessment confidence: ${confidenceMap[confidence] || ''}`);
-
-    // Log the scan for analytics
-    await ScanLog.create({
-      url: url,
-      riskScore: riskScore,
-      verdict: verdict
-    });
-
-    return {
-      riskScore,
-      verdict,
-      verdictEmoji,
-      explanations,
-      confidence: confidence,
-      databaseMatch: null,
-      features: analysisFeatures
-    };
-
-  } catch (error) {
-    console.error('Error calculating risk:', error);
-    return {
-      riskScore: 50,
-      verdict: 'medium',
-      verdictEmoji: '🟡',
-      explanations: ['⚠️ Analysis encountered an issue, please try again']
     };
   }
 }
