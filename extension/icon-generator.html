@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veritas Extension Icon Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-bottom: 1.5rem;
+            color: #333;
+        }
+
+        .icons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .icon-box {
+            text-align: center;
+        }
+
+        .icon-preview {
+            width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            background: #f9f9f9;
+        }
+
+        .icon-label {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        button {
+            background: #646cff;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        .instructions {
+            background: #f0f4ff;
+            border-left: 4px solid #646cff;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-radius: 4px;
+            line-height: 1.6;
+        }
+
+        .instructions h2 {
+            color: #646cff;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .instructions ol {
+            margin-left: 1.5rem;
+            color: #555;
+        }
+
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+
+        code {
+            background: #f9f9f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Monaco', monospace;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Veritas Extension Icon Generator</h1>
+        
+        <div class="instructions">
+            <h2>Instructions:</h2>
+            <ol>
+                <li>Open this HTML file in your browser</li>
+                <li>Right-click on each icon and select "Save image as..."</li>
+                <li>Save with the exact filename (icon-16.png, icon-48.png, icon-128.png)</li>
+                <li>Place them in the <code>extension/icons/</code> folder</li>
+                <li>Then load the extension in Chrome</li>
+            </ol>
+        </div>
+
+        <div class="icons-grid">
+            <div class="icon-box">
+                <canvas id="icon16" width="16" height="16" class="icon-preview"></canvas>
+                <div class="icon-label">16x16</div>
+                <button onclick="downloadIcon('icon16', 'icon-16.png')">Download</button>
+            </div>
+            <div class="icon-box">
+                <canvas id="icon48" width="48" height="48" class="icon-preview"></canvas>
+                <div class="icon-label">48x48</div>
+                <button onclick="downloadIcon('icon48', 'icon-48.png')">Download</button>
+            </div>
+            <div class="icon-box">
+                <canvas id="icon128" width="128" height="128" class="icon-preview"></canvas>
+                <div class="icon-label">128x128</div>
+                <button onclick="downloadIcon('icon128', 'icon-128.png')">Download</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function drawIcon(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const size = canvas.width;
+
+            // Blue gradient background
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#646cff');
+            gradient.addColorStop(1, '#2563eb');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+
+            // White shield border/outline
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = Math.max(1, size / 16);
+
+            // Draw shield shape
+            const padding = size * 0.15;
+            const shieldWidth = size - (padding * 2);
+            const shieldHeight = size - (padding * 1.5);
+
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding + shieldWidth, padding);
+            ctx.lineTo(padding + shieldWidth, padding + shieldHeight * 0.6);
+            ctx.quadraticCurveTo(
+                padding + shieldWidth / 2,
+                padding + shieldHeight,
+                padding + shieldWidth / 2,
+                padding + shieldHeight
+            );
+            ctx.quadraticCurveTo(
+                padding,
+                padding + shieldHeight * 0.6,
+                padding,
+                padding + shieldHeight * 0.6
+            );
+            ctx.closePath();
+            ctx.stroke();
+
+            // Draw checkmark inside
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = Math.max(1.5, size / 12);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            const checkX = padding + shieldWidth * 0.3;
+            const checkY = padding + shieldHeight * 0.35;
+            const checkSize = shieldWidth * 0.4;
+
+            ctx.beginPath();
+            ctx.moveTo(checkX, checkY + checkSize / 2);
+            ctx.lineTo(checkX + checkSize / 3, checkY + checkSize);
+            ctx.lineTo(checkX + checkSize, checkY);
+            ctx.stroke();
+        }
+
+        // Draw all icons on load
+        window.addEventListener('load', () => {
+            drawIcon('icon16');
+            drawIcon('icon48');
+            drawIcon('icon128');
+        });
+
+        function downloadIcon(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = filename;
+            link.click();
+        }
+    </script>
+</body>
+</html>

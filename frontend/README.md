@@ -1,13 +1,89 @@
-# React + Vite
+# Veritas Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend for the Veritas scam detection system.
 
-Currently, two official plugins are available:
+## 🚀 Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+Frontend will run at `http://localhost:5173`
+
+## 📁 Structure
+
+```
+src/
+├── pages/
+│   ├── Home.jsx        # Main scanner page
+│   ├── Report.jsx      # Submit scam reports
+│   ├── Admin.jsx       # Admin dashboard
+│   └── About.jsx       # About & disclaimer
+├── components/
+│   ├── Navigation.jsx  # Top navbar
+│   ├── Footer.jsx      # Footer + about modal
+│   └── ResultCard.jsx  # Result display
+├── App.jsx             # Main app component
+├── App.css             # Component styles
+├── index.css           # Global styles
+└── main.jsx            # React entry point
+```
+
+## 🎨 Design
+
+- **Color Scheme**: Blue gradients (#646cff to #2563eb)
+- **Responsive**: Mobile-first design
+- **Animations**: Smooth transitions and fade-ins
+- **Accessibility**: High contrast, readable fonts
+
+## 🔧 Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+
+## 🔌 API Connection
+
+Frontend connects to backend at `http://localhost:3000/api`
+
+Make sure backend is running before starting frontend!
+
+## 📦 Dependencies
+
+- react: ^19.2.0
+- react-dom: ^19.2.0
+- react-router-dom: ^7.1.0
+
+## 🌐 Pages
+
+### Home Page
+- URL/message input form
+- Real-time scam analysis
+- Risk score display
+- Technical analysis details
+- Example URLs to try
+- How it works section
+
+### Report Page
+- Simple reporting form
+- Category selection
+- Email confirmation
+- Privacy information
+
+### Admin Dashboard
+- Admin authentication
+- View statistics
+- Manage reports
+- Manage scam database
+- Add/delete entries
+
+### About Page
+- How Veritas works
+- Why it's important
+- Disclaimer & warnings
+- Contact information
 
 The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 

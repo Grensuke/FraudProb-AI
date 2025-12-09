@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veritas - Scam Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 400px;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 0;
+        }
+
+        .popup-header {
+            background: linear-gradient(135deg, #646cff 0%, #2563eb 100%);
+            padding: 1.5rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .popup-header-logo {
+            font-size: 2rem;
+        }
+
+        .popup-header-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .popup-content {
+            padding: 1.5rem;
+        }
+
+        .info-box {
+            background: rgba(100, 108, 255, 0.1);
+            border: 1px solid rgba(100, 108, 255, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        .info-title {
+            font-weight: 700;
+            color: #646cff;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-text {
+            color: #aaa;
+        }
+
+        .button {
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 0.75rem;
+        }
+
+        .button-primary {
+            background: linear-gradient(135deg, #646cff 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .button-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(100, 108, 255, 0.3);
+        }
+
+        .button-secondary {
+            background: rgba(100, 108, 255, 0.1);
+            color: #646cff;
+            border: 1px solid rgba(100, 108, 255, 0.3);
+        }
+
+        .button-secondary:hover {
+            background: rgba(100, 108, 255, 0.2);
+        }
+
+        .current-url {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(100, 108, 255, 0.2);
+            padding: 0.75rem;
+            border-radius: 4px;
+            word-break: break-all;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #aaa;
+            margin-bottom: 1rem;
+        }
+
+        .links {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .link {
+            color: #646cff;
+            text-decoration: none;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border: 1px solid rgba(100, 108, 255, 0.3);
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+
+        .link:hover {
+            background: rgba(100, 108, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="popup-header">
+        <span class="popup-header-logo">🛡️</span>
+        <span class="popup-header-title">Veritas</span>
+    </div>
+
+    <div class="popup-content">
+        <div id="currentUrl" class="current-url"></div>
+
+        <div class="info-box">
+            <div class="info-title">✓ Real-Time Scanning Active</div>
+            <div class="info-text">
+                This extension automatically scans every website you visit for phishing, scams, and malicious content.
+            </div>
+        </div>
+
+        <div class="info-box">
+            <div class="info-title">🎯 How It Works</div>
+            <div class="info-text">
+                1. Website loads → 2. URL analyzed with AI → 3. Result displayed in sidebar
+            </div>
+        </div>
+
+        <button class="button button-primary" id="openDashboard">Open Dashboard</button>
+        <button class="button button-secondary" id="reportPhishing">Report Phishing</button>
+
+        <div class="links">
+            <a href="http://localhost:5173" target="_blank" class="link">Veritas Home</a>
+            <a href="http://localhost:5173/admin" target="_blank" class="link">Admin</a>
+            <a href="http://localhost:5173/about" target="_blank" class="link">About</a>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
