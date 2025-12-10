@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import ResultCard from '../components/ResultCard';
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'https://veritas-lsb6.onrender.com/api';
 
 export default function Home() {
   const [input, setInput] = useState('');

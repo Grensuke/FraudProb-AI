@@ -36,6 +36,62 @@ export default function ResultCard({ result }) {
         </div>
       )}
 
+      {result.threatAnalysis && (
+        <div className="threat-analysis-section">
+          <h4>🎯 Threat Analysis Summary</h4>
+          <div className="threat-grid">
+            {result.threatAnalysis.isRecentlyRegistered && (
+              <div className="threat-item threat-critical">
+                <span className="threat-label">📅 Domain Age:</span>
+                <span>Recently registered</span>
+              </div>
+            )}
+            {result.threatAnalysis.hasPhishingIndicators && (
+              <div className="threat-item threat-critical">
+                <span className="threat-label">🎣 Phishing:</span>
+                <span>Lookalike patterns detected</span>
+              </div>
+            )}
+            {result.threatAnalysis.hasSuspiciousParams && (
+              <div className="threat-item threat-high">
+                <span className="threat-label">⚡ URL Params:</span>
+                <span>Suspicious parameters</span>
+              </div>
+            )}
+            {result.threatAnalysis.hasSuspiciousSubdomain && (
+              <div className="threat-item threat-high">
+                <span className="threat-label">📧 Subdomain:</span>
+                <span>Suspicious subdomain</span>
+              </div>
+            )}
+            {result.threatAnalysis.hasRedirectChain && (
+              <div className="threat-item threat-high">
+                <span className="threat-label">🔄 Redirects:</span>
+                <span>Multiple redirects detected</span>
+              </div>
+            )}
+            {result.threatAnalysis.isInternationalThreat && (
+              <div className="threat-item threat-critical">
+                <span className="threat-label">🌍 Threat DB:</span>
+                <span>International threat match</span>
+              </div>
+            )}
+            {result.threatAnalysis.hasUrgencyTactics && (
+              <div className="threat-item threat-medium">
+                <span className="threat-label">⏰ Urgency:</span>
+                <span>Time-pressure tactics</span>
+              </div>
+            )}
+            {result.threatAnalysis.hasFinancialLures && (
+              <div className="threat-item threat-medium">
+                <span className="threat-label">💰 Financial:</span>
+                <span>Money/payment targeted</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="explanations">
         <strong>Analysis Details:</strong>
         {result.explanations && result.explanations.length > 0 ? (
@@ -60,12 +116,8 @@ export default function ResultCard({ result }) {
               </span>
             </div>
             <div className="feature-item">
-              <span className="feature-label">URL Length:</span>
-              <span>{result.features.urlLength} chars</span>
-            </div>
-            <div className="feature-item">
-              <span className="feature-label">Suspicious Keywords:</span>
-              <span>{result.features.keywordMatches}</span>
+              <span className="feature-label">Phishing Patterns:</span>
+              <span>{result.features.phishingPatterns} detected</span>
             </div>
             <div className="feature-item">
               <span className="feature-label">Homograph Attack:</span>
@@ -83,6 +135,30 @@ export default function ResultCard({ result }) {
               <span className="feature-label">IP Address:</span>
               <span className={result.features.isIPAddress ? 'feature-no' : 'feature-yes'}>
                 {result.features.isIPAddress ? '✗ IP Used' : '✓ Domain'}
+              </span>
+            </div>
+            <div className="feature-item">
+              <span className="feature-label">Recently Registered:</span>
+              <span className={result.features.isRecentlyRegisteredIndicator ? 'feature-no' : 'feature-yes'}>
+                {result.features.isRecentlyRegisteredIndicator ? '⚠️ Detected' : '✓ Normal'}
+              </span>
+            </div>
+            <div className="feature-item">
+              <span className="feature-label">Suspicious Subdomains:</span>
+              <span className={result.features.hasSuspiciousSubdomain ? 'feature-no' : 'feature-yes'}>
+                {result.features.hasSuspiciousSubdomain ? '⚠️ Detected' : '✓ None'}
+              </span>
+            </div>
+            <div className="feature-item">
+              <span className="feature-label">Redirect Chains:</span>
+              <span className={result.features.hasRedirectChain ? 'feature-no' : 'feature-yes'}>
+                {result.features.hasRedirectChain ? '⚠️ Detected' : '✓ None'}
+              </span>
+            </div>
+            <div className="feature-item">
+              <span className="feature-label">Suspicious Parameters:</span>
+              <span className={result.features.hasSuspiciousParams ? 'feature-no' : 'feature-yes'}>
+                {result.features.hasSuspiciousParams ? '⚠️ Detected' : '✓ None'}
               </span>
             </div>
           </div>
