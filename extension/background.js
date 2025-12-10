@@ -1,5 +1,5 @@
 // Service Worker - Background script
-const API_URL = 'http://localhost:3000/api/analyze';
+const API_URL = 'https://veritas-lsb6.onrender.com/api/analyze';
 
 console.log('[Veritas] Service Worker started');
 

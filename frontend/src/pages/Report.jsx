@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'https://veritas-lsb6.onrender.com/api';
 
 export default function Report() {
   const [formData, setFormData] = useState({

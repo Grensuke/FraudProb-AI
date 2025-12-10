@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const API_URL = 'http://localhost:3000/api/admin';
+const API_URL = 'https://veritas-lsb6.onrender.com/api/admin';
 
 export default function Admin() {
   const [adminKey, setAdminKey] = useState('');
