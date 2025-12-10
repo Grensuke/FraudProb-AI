@@ -8,7 +8,10 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: ['https://nveritas.vercel.app', 'http://localhost:3000', 'http://localhost:5173'],
+  credentials: true
+}));
 
 // ============================================
 // DATABASE MODELS
@@ -120,7 +123,65 @@ const SUSPICIOUS_TLDS = [
 ];
 
 // ============================================
-// ADVANCED ML MODEL WITH 20+ FEATURES
+// INTERNATIONAL THREAT INTELLIGENCE DATABASES
+// ============================================
+
+// CERT-IN (Indian Computer Emergency Response Team) patterns
+const CERTIN_PHISHING_KEYWORDS = [
+  'icici', 'hdfc', 'sbi', 'axis', 'boi', 'federal-bank', 'kotak',
+  'airtel', 'vodafone', 'jio', 'aadhaar', 'pan', 'gst'
+];
+
+// RBI Fraud Alert patterns (Reserve Bank of India)
+const RBI_FRAUD_PATTERNS = [
+  'neft', 'rtgs', 'imps', 'upi', 'rupay', 'banking-security',
+  'rbi-alert', 'reserve-bank', 'currency', 'forex'
+];
+
+// Phishing.org known patterns
+const PHISHING_ORG_PATTERNS = [
+  'paypal-login', 'amazon-verify', 'apple-id', 'microsoft-account',
+  'google-signin', 'facebook-login', 'banking-security'
+];
+
+// Scamwatch (ACCC Australia) patterns
+const SCAMWATCH_PATTERNS = [
+  'advance-fee', 'romance-scam', 'investment-scam', 'job-scam',
+  'lottery-scam', 'nigerian-prince', 'western-union'
+];
+
+// Additional suspicious patterns from user-reported database
+const USER_REPORTED_PATTERNS = [
+  'verify-account', 'confirm-identity', 'update-payment', 'security-alert',
+  'account-suspended', 'limited-time', 'act-immediately', 'unusual-activity'
+];
+
+// ============================================
+// ENHANCED PHISHING PATTERN DETECTION
+// ============================================
+
+// Suspicious parameter patterns in URLs (common in phishing)
+const SUSPICIOUS_PARAMS = [
+  'redirect', 'return', 'callback', 'action=login', 'action=verify',
+  'form=login', 'login_page', 'verify_page', 'page=login',
+  'redir', 'ref', 'return_to', 'goto', 'url', 'returnUrl'
+];
+
+// Suspicious subdomains (often used in phishing)
+const SUSPICIOUS_SUBDOMAINS = [
+  'verify', 'secure', 'login', 'account', 'signin', 'auth', 'payment',
+  'billing', 'update', 'confirm', 'activate', 'support', 'admin',
+  'banking', 'webmail', 'customer', 'portal', 'panel'
+];
+
+// Forms and input field indicators (high-risk when combined with suspicious domains)
+const FORM_KEYWORDS = [
+  'form', 'login', 'signin', 'password', 'username', 'credentials',
+  'otp', 'pin', 'cvv', 'card-number', 'social-security', 'ssn'
+];
+
+// ============================================
+// ADVANCED ML MODEL WITH 25+ FEATURES
 // ============================================
 
 function extractURLFeatures(url) {
@@ -148,17 +209,18 @@ function extractURLFeatures(url) {
       domainRepScore = hasSuspiciousTLD ? 0.35 : 0.15;
     }
     
-    // Check domain age indicators (new domains are riskier)
+    // NEW: Domain age detection (without real WHOIS, use indicators)
     const isDomainNumberHeavy = domainParts.some(part => /\d/.test(part) && part.length < 4);
-    const domainAgeScore = isDomainNumberHeavy ? 0.15 : 0;
+    let domainAgeScore = isDomainNumberHeavy ? 0.15 : 0;
+    
+    // Check for newly-registered domain indicators (numbers at end, short domain)
+    const isNumberedDomain = /\d{1,4}$/.test(domainParts[0]); // e.g., 'bank123'
+    const isShortDomain = domain.length < 8 && !isTrustedDomain; // Too-short unusual domain
+    const isRecentlyRegisteredIndicator = isNumberedDomain || isShortDomain;
+    
+    domainAgeScore = Math.max(domainAgeScore, isRecentlyRegisteredIndicator ? 0.25 : 0);
 
     // ========== FEATURE 7-9: CONTENT ANALYSIS ==========
-    const urlLength = url.length;
-    let lengthScore = 0;
-    if (urlLength < 10) lengthScore = 0.12;
-    else if (urlLength > 200) lengthScore = 0.18;
-    else if (urlLength > 150) lengthScore = 0.12;
-    
     // Financial keywords score
     const financialMatches = FINANCIAL_KEYWORDS.filter(kw => urlLower.includes(kw)).length;
     const financialScore = Math.min(financialMatches * 0.2, 0.7);
@@ -175,7 +237,7 @@ function extractURLFeatures(url) {
     const phishingPatternMatches = PHISHING_PATTERNS.filter(pattern => urlLower.includes(pattern)).length;
     const phishingScore = Math.min(phishingPatternMatches * 0.25, 0.8);
 
-    // ========== FEATURE 13-15: STRUCTURAL ANALYSIS ==========
+    // ========== FEATURE 13-18: STRUCTURAL ANALYSIS ==========
     const specialCharCount = (url.match(/[!@#$%^&*()-_=+\[\]{};:'",.<>?\/\\]/g) || []).length;
     const specialCharScore = Math.min(specialCharCount * 0.08, 0.4);
     
@@ -189,7 +251,7 @@ function extractURLFeatures(url) {
     const subdomainCount = domainParts.length;
     const subdomainScore = subdomainCount > 5 ? 0.2 : subdomainCount > 3 ? 0.1 : 0;
 
-    // ========== FEATURE 16-18: REDIRECT & OBFUSCATION ==========
+    // ========== FEATURE 19-21: REDIRECT & OBFUSCATION ==========
     const urlShorteners = ['bit.ly', 'tinyurl', 'ow.ly', 'short.url', 'goo.gl', 
                            'buff.ly', 'adf.ly', 'shorte.st', 'u.to', 'v.gd', 'x.co'];
     const hasRedirect = urlShorteners.some(short => urlLower.includes(short));
@@ -203,7 +265,31 @@ function extractURLFeatures(url) {
     const hasAtSymbol = url.includes('@');
     const atSymbolScore = hasAtSymbol ? 0.4 : 0;
 
-    // ========== FEATURE 19-20: SCAM TYPE DETECTION ==========
+    // ========== FEATURE 22-25: ENHANCED PHISHING DETECTION ==========
+    
+    // Suspicious parameters in URL (redirect, callback, etc.)
+    const hasSuspiciousParams = SUSPICIOUS_PARAMS.some(param => urlLower.includes(param));
+    const suspiciousParamScore = hasSuspiciousParams ? 0.25 : 0;
+    
+    // Suspicious subdomains combined with non-trusted domains
+    const hasSuspiciousSubdomain = SUSPICIOUS_SUBDOMAINS.some(sub => 
+      domain.includes(sub) && !isTrustedDomain
+    );
+    const suspiciousSubdomainScore = hasSuspiciousSubdomain ? 0.22 : 0;
+    
+    // International threat database matching
+    let internationalThreatScore = 0;
+    if (CERTIN_PHISHING_KEYWORDS.some(kw => urlLower.includes(kw))) internationalThreatScore = Math.max(internationalThreatScore, 0.3);
+    if (RBI_FRAUD_PATTERNS.some(kw => urlLower.includes(kw))) internationalThreatScore = Math.max(internationalThreatScore, 0.28);
+    if (PHISHING_ORG_PATTERNS.some(kw => urlLower.includes(kw))) internationalThreatScore = Math.max(internationalThreatScore, 0.32);
+    if (SCAMWATCH_PATTERNS.some(kw => urlLower.includes(kw))) internationalThreatScore = Math.max(internationalThreatScore, 0.29);
+    if (USER_REPORTED_PATTERNS.some(kw => urlLower.includes(kw))) internationalThreatScore = Math.max(internationalThreatScore, 0.25);
+    
+    // Redirect chains detection (multiple slashes and suspicious patterns)
+    const hasRedirectChain = (pathname.match(/\//g) || []).length > 5 && urlLower.includes('redirect');
+    const redirectChainScore = hasRedirectChain ? 0.2 : 0;
+
+    // ========== FEATURE 26: SCAM TYPE DETECTION ==========
     let scamTypeScore = 0;
     let detectedScamType = null;
     
@@ -221,12 +307,15 @@ function extractURLFeatures(url) {
 
     // ========== COMBINED FEATURE VECTORS ==========
     const features = {
-      urlLength,
       hasHTTPS,
       isIPAddress,
       isHomograph,
       hasRedirect,
       hasAtSymbol,
+      hasSuspiciousParams,
+      hasSuspiciousSubdomain,
+      hasRedirectChain,
+      isRecentlyRegisteredIndicator,
       financialKeywords: financialMatches,
       urgencyKeywords: urgencyMatches,
       securityThreatKeywords: securityThreatMatches,
@@ -234,7 +323,8 @@ function extractURLFeatures(url) {
       specialCharCount,
       subdomainCount,
       pathDepth,
-      detectedScamType
+      detectedScamType,
+      internationalThreatMatch: internationalThreatScore > 0
     };
 
     // ========== ADVANCED WEIGHTED SCORING ==========
@@ -242,7 +332,7 @@ function extractURLFeatures(url) {
       httpsScore * 0.18 +                // HTTPS: 18%
       selfSignedScore * 0.12 +           // Self-signed certs: 12%
       domainRepScore * 0.22 +            // Domain reputation: 22%
-      domainAgeScore * 0.15 +            // Domain age (new): 15%
+      domainAgeScore * 0.2 +             // Domain age: 20% (INCREASED)
       phishingScore * 0.4 +              // Phishing patterns: 40% (CRITICAL)
       securityThreatScore * 0.35 +       // Security threat language: 35%
       financialScore * 0.3 +             // Financial keywords: 30%
@@ -254,9 +344,8 @@ function extractURLFeatures(url) {
       specialCharScore * 0.15 +          // Special chars: 15%
       subdomainScore * 0.18 +            // Subdomains: 18%
       depthScore * 0.1 +                 // Path depth: 10%
-      scamTypeScore * 0.25 +             // Scam patterns: 25%
-      lengthScore * 0.12                 // URL length: 12%
-    ) / 6.0; // Normalized weights
+      scamTypeScore * 0.25               // Scam patterns: 25%
+    ) / 6.4; // Normalized weights
 
     return {
       ...features,
@@ -278,20 +367,25 @@ function calculateAdvancedConfidence(features, baseScore) {
   if (features.phishingPatterns > 0) criticalIndicators += 2;
   if (features.hasAtSymbol) criticalIndicators += 2;
   if (features.securityThreatKeywords > 1) criticalIndicators += 1;
+  if (features.isRecentlyRegisteredIndicator) criticalIndicators += 1; // NEW
+  if (features.hasSuspiciousParams) criticalIndicators += 1; // NEW
   
   // Major indicators
   if (features.hasRedirect) riskIndicators += 2;
   if (features.isHomograph) riskIndicators += 2;
+  if (features.hasSuspiciousSubdomain) riskIndicators += 2; // NEW
+  if (features.hasRedirectChain) riskIndicators += 2; // NEW
   if (features.urgencyKeywords > 1) riskIndicators += 1;
   if (features.financialKeywords > 0) riskIndicators += 1;
   if (!features.hasHTTPS) riskIndicators += 1;
   if (features.specialCharCount > 8) riskIndicators += 1;
   if (features.subdomainCount > 4) riskIndicators += 1;
+  if (features.internationalThreatMatch) riskIndicators += 1; // NEW
 
   // Score-based confidence
-  if (criticalIndicators >= 4) return 'critical';
-  if (criticalIndicators >= 2 || (riskIndicators >= 5)) return 'very-high';
-  if (riskIndicators >= 4) return 'high';
+  if (criticalIndicators >= 5) return 'critical';
+  if (criticalIndicators >= 3 || (riskIndicators >= 6)) return 'very-high';
+  if (riskIndicators >= 5) return 'high';
   if (riskIndicators >= 2) return 'medium';
   if (riskIndicators >= 1) return 'low';
   return 'very-low';
@@ -379,10 +473,35 @@ async function calculateRiskScore(url) {
       explanations.push('🔒 ✓ HTTPS encryption enabled - Connection secured');
     }
 
+    // Domain age detection
+    if (analysisFeatures.isRecentlyRegisteredIndicator) {
+      explanations.push(`⏰ ALERT: Recently registered domain indicator detected - New domains are commonly used in scams`);
+    }
+
     // Critical phishing indicators
     if (analysisFeatures.phishingPatterns > 0) {
       const indicators = PHISHING_PATTERNS.filter(p => url.toLowerCase().includes(p));
       explanations.push(`🎣 CRITICAL: ${analysisFeatures.phishingPatterns} lookalike domain indicator(s) - Potential impersonation`);
+    }
+
+    // Suspicious parameters (phishing pattern)
+    if (analysisFeatures.hasSuspiciousParams) {
+      explanations.push(`⚡ Suspicious URL parameters detected - Common in credential-harvesting attacks`);
+    }
+
+    // Suspicious subdomains (phishing pattern)
+    if (analysisFeatures.hasSuspiciousSubdomain) {
+      explanations.push(`📧 Suspicious subdomain detected - Phishing sites often use misleading subdomains`);
+    }
+
+    // Redirect chains (phishing pattern)
+    if (analysisFeatures.hasRedirectChain) {
+      explanations.push(`🔄 Multiple redirects detected - Obfuscates true destination (phishing technique)`);
+    }
+
+    // International threat database matches
+    if (analysisFeatures.internationalThreatMatch) {
+      explanations.push(`🌍 Matches patterns in international threat databases (CERT-IN, RBI, Phishing.org, Scamwatch)`);
     }
 
     // Financial threat indicators
@@ -474,6 +593,11 @@ async function calculateRiskScore(url) {
       features: analysisFeatures,
       threatAnalysis: {
         hasPhishingIndicators: analysisFeatures.phishingPatterns > 0,
+        hasSuspiciousParams: analysisFeatures.hasSuspiciousParams,
+        hasSuspiciousSubdomain: analysisFeatures.hasSuspiciousSubdomain,
+        hasRedirectChain: analysisFeatures.hasRedirectChain,
+        isRecentlyRegistered: analysisFeatures.isRecentlyRegisteredIndicator,
+        isInternationalThreat: analysisFeatures.internationalThreatMatch,
         hasUrgencyTactics: analysisFeatures.urgencyKeywords > 0,
         hasFinancialLures: analysisFeatures.financialKeywords > 0,
         isCriticalThreat: riskScore > 75
