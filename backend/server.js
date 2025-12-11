@@ -390,16 +390,21 @@ function extractURLFeatures(url) {
     const commonBrands = ['paypal.com', 'amazon.com', 'google.com', 'facebook.com', 'apple.com'];
     if (!isLookalikeDetected) {
       for (const brand of commonBrands) {
-        const brandName = brand.split('.')[0];
-        if (domain.includes(brandName) && domain !== brand) {
-          // Check edit distance
-          const similarity = calculateDomainSimilarity(domain, brand);
-          if (similarity > 0.75) {
-            isLookalikeDetected = true;
-            lookalikeBrand = brandName.charAt(0).toUpperCase() + brandName.slice(1);
-            lookalikeSimilarity = similarity;
-            break;
+        try {
+          const brandName = brand.split('.')[0];
+          if (domain.includes(brandName) && domain !== brand) {
+            // Check edit distance
+            const similarity = calculateDomainSimilarity(domain, brand);
+            if (similarity > 0.75) {
+              isLookalikeDetected = true;
+              lookalikeBrand = brandName.charAt(0).toUpperCase() + brandName.slice(1);
+              lookalikeSimilarity = similarity;
+              break;
+            }
           }
+        } catch (e) {
+          // Continue to next brand if similarity check fails
+          continue;
         }
       }
     }
@@ -518,12 +523,6 @@ function extractURLFeatures(url) {
       lookalikeBrand,
       lookalikeSimilarity,
       hasConfusableChars
-    };
-      pathDepth,
-      detectedScamType,
-      internationalThreatMatch: internationalThreatScore > 0,
-      isKnownPiracySite,
-      hasIllegalContentIndicators: hasIllegalIndicators > 0
     };
 
     // ========== ADVANCED WEIGHTED SCORING ==========
