@@ -6,6 +6,18 @@ const dotenv = require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Global error handler for uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('🔴 UNCAUGHT EXCEPTION:', error.message);
+  console.error('Stack:', error.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🔴 UNHANDLED REJECTION:', reason);
+  console.error('Promise:', promise);
+});
+
 // Middleware
 app.use(express.json());
 app.use(cors({
