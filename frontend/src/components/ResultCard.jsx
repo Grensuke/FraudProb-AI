@@ -40,16 +40,28 @@ export default function ResultCard({ result }) {
         <div className="threat-analysis-section">
           <h4>🎯 Threat Analysis Summary</h4>
           <div className="threat-grid">
-            {result.threatAnalysis.isRecentlyRegistered && (
-              <div className="threat-item threat-critical">
-                <span className="threat-label">📅 Domain Age:</span>
-                <span>Recently registered</span>
-              </div>
-            )}
             {result.threatAnalysis.hasPhishingIndicators && (
               <div className="threat-item threat-critical">
                 <span className="threat-label">🎣 Phishing:</span>
                 <span>Lookalike patterns detected</span>
+              </div>
+            )}
+            {result.features && result.features.isLookalikeDetected && (
+              <div className="threat-item threat-critical" style={{ backgroundColor: '#c0392b', borderLeft: '4px solid #8b0000' }}>
+                <span className="threat-label">🚨 LOOKALIKE DOMAIN:</span>
+                <span>Impersonating {result.features.lookalikeBrand} ({Math.round(result.features.lookalikeSimilarity * 100)}% match)</span>
+              </div>
+            )}
+            {result.features && result.features.hasConfusableChars && (
+              <div className="threat-item threat-critical">
+                <span className="threat-label">🔤 Homograph:</span>
+                <span>Confusable characters detected</span>
+              </div>
+            )}
+            {result.threatAnalysis.isRecentlyRegistered && (
+              <div className="threat-item threat-critical">
+                <span className="threat-label">📅 Domain Age:</span>
+                <span>Recently registered</span>
               </div>
             )}
             {result.threatAnalysis.hasSuspiciousParams && (
@@ -107,8 +119,22 @@ export default function ResultCard({ result }) {
 
       {result.features && (
         <div className="features-section">
-          <h4 style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>Technical Analysis</h4>
+          <h4 style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>🔍 Technical Analysis & Lookalike Detection</h4>
           <div className="features-grid">
+            {result.features.isLookalikeDetected && (
+              <div className="feature-item" style={{ backgroundColor: '#ffe6e6', borderLeft: '4px solid #c0392b' }}>
+                <span className="feature-label">🚨 LOOKALIKE DOMAIN:</span>
+                <span style={{ color: '#c0392b', fontWeight: 'bold' }}>
+                  Imitating {result.features.lookalikeBrand} ({Math.round(result.features.lookalikeSimilarity * 100)}% match)
+                </span>
+              </div>
+            )}
+            {result.features.hasConfusableChars && (
+              <div className="feature-item" style={{ backgroundColor: '#ffe6e6', borderLeft: '4px solid #c0392b' }}>
+                <span className="feature-label">🔤 Confusable Chars:</span>
+                <span style={{ color: '#c0392b' }}>✗ Homograph characters detected</span>
+              </div>
+            )}
             <div className="feature-item">
               <span className="feature-label">HTTPS Enabled:</span>
               <span className={result.features.hasHTTPS ? 'feature-yes' : 'feature-no'}>

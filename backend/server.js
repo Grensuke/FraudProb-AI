@@ -238,6 +238,51 @@ const FORM_KEYWORDS = [
 ];
 
 // ============================================
+// LOOKALIKE DOMAIN SIMILARITY CALCULATOR
+// ============================================
+
+function calculateDomainSimilarity(domain1, domain2) {
+  // Remove TLD and compare base names
+  const base1 = domain1.split('.')[0];
+  const base2 = domain2.split('.')[0];
+  
+  // Calculate Levenshtein distance
+  const dist = levenshteinDistance(base1, base2);
+  const maxLen = Math.max(base1.length, base2.length);
+  
+  // Return similarity score (0-1, where 1 is identical)
+  return 1 - (dist / maxLen);
+}
+
+function levenshteinDistance(a, b) {
+  const matrix = [];
+  
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+  
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  
+  return matrix[b.length][a.length];
+}
+
+// ============================================
 // ADVANCED ML MODEL WITH 25+ FEATURES
 // ============================================
 
@@ -298,11 +343,69 @@ function extractURLFeatures(url) {
     const specialCharCount = (url.match(/[!@#$%^&*()-_=+\[\]{};:'",.<>?\/\\]/g) || []).length;
     const specialCharScore = Math.min(specialCharCount * 0.08, 0.4);
     
-    // Homograph attack (unicode/lookalike chars)
-    const isHomograph = domain.includes('xn--') || 
-                        /[0-9]+[Ol]/i.test(domain) || 
-                        /rn|m|cl|1l|0o|5s/i.test(domain);
-    const homographScore = isHomograph ? 0.4 : 0;
+    // ========== FEATURE 13-15: LOOKALIKE/HOMOGRAPH DETECTION ==========
+    
+    // ENHANCED: Homograph attack detection (visual similarity)
+    // Unicode punycode (xn--) domains that look like popular sites
+    const isUnicodePunycode = domain.includes('xn--');
+    
+    // Confusable character patterns (l vs 1, 0 vs O, etc.)
+    const confusableChars = /([0-9]+[Ol]|[Ol]+[0-9]|rn|m|cl|1l|0o|5s)/i;
+    const hasConfusableChars = confusableChars.test(domain);
+    
+    // CRITICAL: Check against known lookalike patterns
+    const LOOKALIKE_TARGETS = {
+      'paypal': ['paypa1', 'paypa|', 'paypa7', 'p4ypal', 'paypal-login', 'paypal-verify'],
+      'amazon': ['amazom', 'amaz0n', 'amaz0m', 'amzn-', 'amazon-login', 'amazon-verify'],
+      'google': ['gogle', 'g00gle', 'goog1e', 'google-login', 'google-verify'],
+      'facebook': ['faceb00k', 'facebok', 'facebook1', 'facebook-login', 'facebook-verify'],
+      'instagram': ['instgram', 'instagam', 'instagram1', 'instagram-login'],
+      'twitter': ['tw1tter', 'twiter', 'twitter-login'],
+      'apple': ['appl3', 'aple', 'apple-login', 'apple-verify'],
+      'microsoft': ['micr0soft', 'microsft', 'microsoft1', 'microsoft-login'],
+      'linkedin': ['linkedm', 'linked1n', 'linkedin-login'],
+      'github': ['github1', 'git-hub', 'github-login'],
+      'netflix': ['netfl1x', 'netflix-login'],
+      'spotify': ['spotif7', 'spotify-login'],
+      'dropbox': ['dropb0x', 'dropbox-login'],
+      'slack': ['slack1', 'slack-login'],
+      'gmail': ['gmai1', 'gmail-login']
+    };
+    
+    let isLookalikeDetected = false;
+    let lookalikeBrand = null;
+    let lookalikeSimilarity = 0;
+    
+    // Check for lookalike patterns
+    for (const [brand, patterns] of Object.entries(LOOKALIKE_TARGETS)) {
+      if (patterns.some(pattern => domain.includes(pattern) || urlLower.includes(pattern))) {
+        isLookalikeDetected = true;
+        lookalikeBrand = brand.charAt(0).toUpperCase() + brand.slice(1);
+        lookalikeSimilarity = 0.85;
+        break;
+      }
+    }
+    
+    // Calculate visual similarity using Levenshtein-like approach for common brand domains
+    const commonBrands = ['paypal.com', 'amazon.com', 'google.com', 'facebook.com', 'apple.com'];
+    if (!isLookalikeDetected) {
+      for (const brand of commonBrands) {
+        const brandName = brand.split('.')[0];
+        if (domain.includes(brandName) && domain !== brand) {
+          // Check edit distance
+          const similarity = calculateDomainSimilarity(domain, brand);
+          if (similarity > 0.75) {
+            isLookalikeDetected = true;
+            lookalikeBrand = brandName.charAt(0).toUpperCase() + brandName.slice(1);
+            lookalikeSimilarity = similarity;
+            break;
+          }
+        }
+      }
+    }
+    
+    const isHomograph = isUnicodePunycode || hasConfusableChars || isLookalikeDetected;
+    const homographScore = isHomograph ? Math.max(0.4, lookalikeSimilarity * 0.5) : 0;
     
     // Subdomain chains (too many levels = suspicious)
     const subdomainCount = domainParts.length;
@@ -409,6 +512,17 @@ function extractURLFeatures(url) {
       detectedScamType,
       internationalThreatMatch: internationalThreatScore > 0,
       isKnownPiracySite,
+      hasIllegalContentIndicators: hasIllegalIndicators > 0,
+      // ⭐ NEW: Lookalike domain info
+      isLookalikeDetected,
+      lookalikeBrand,
+      lookalikeSimilarity,
+      hasConfusableChars
+    };
+      pathDepth,
+      detectedScamType,
+      internationalThreatMatch: internationalThreatScore > 0,
+      isKnownPiracySite,
       hasIllegalContentIndicators: hasIllegalIndicators > 0
     };
 
@@ -455,7 +569,9 @@ function calculateAdvancedConfidence(features, baseScore) {
   if (features.securityThreatKeywords > 1) criticalIndicators += 1;
   if (features.isRecentlyRegisteredIndicator) criticalIndicators += 1;
   if (features.hasSuspiciousParams) criticalIndicators += 1;
-  if (features.isKnownPiracySite) criticalIndicators += 3; // ⭐ NEW: Known piracy site = CRITICAL
+  if (features.isKnownPiracySite) criticalIndicators += 3;
+  // ⭐ NEW: Lookalike domains are CRITICAL threats
+  if (features.isLookalikeDetected) criticalIndicators += 4; // HIGHEST weight for lookalikes
   
   // Major indicators
   if (features.hasRedirect) riskIndicators += 2;
@@ -468,14 +584,16 @@ function calculateAdvancedConfidence(features, baseScore) {
   if (features.specialCharCount > 8) riskIndicators += 1;
   if (features.subdomainCount > 4) riskIndicators += 1;
   if (features.internationalThreatMatch) riskIndicators += 1;
-  if (features.hasIllegalContentIndicators) riskIndicators += 2; // ⭐ NEW: Illegal content indicators
+  if (features.hasIllegalContentIndicators) riskIndicators += 2;
+  // ⭐ NEW: Also add to major indicators
+  if (features.hasConfusableChars) riskIndicators += 3; // Confusable characters in domain
 
   // Score-based confidence
-  if (criticalIndicators >= 6) return 'critical';
-  if (criticalIndicators >= 4 || (riskIndicators >= 8)) return 'very-high';
-  if (criticalIndicators >= 3 || (riskIndicators >= 6)) return 'high';
-  if (riskIndicators >= 4) return 'medium';
-  if (riskIndicators >= 2) return 'low';
+  if (criticalIndicators >= 8) return 'critical';
+  if (criticalIndicators >= 6 || (riskIndicators >= 10)) return 'very-high';
+  if (criticalIndicators >= 4 || (riskIndicators >= 8)) return 'high';
+  if (criticalIndicators >= 2 || (riskIndicators >= 6)) return 'medium';
+  if (riskIndicators >= 3) return 'low';
   return 'very-low';
 }
 
@@ -626,8 +744,13 @@ async function calculateRiskScore(url) {
       explanations.push(`📧 CRITICAL: @ symbol in URL - Email injection attack technique`);
     }
 
-    if (analysisFeatures.specialCharCount > 8) {
-      explanations.push(`🔤 Excessive special characters (${analysisFeatures.specialCharCount}) - Obfuscation detected`);
+    // ⭐ ENHANCED: Lookalike domain detection
+    if (analysisFeatures.isLookalikeDetected) {
+      const similarity = Math.round(analysisFeatures.lookalikeSimilarity * 100);
+      explanations.push(`🎣 🚨 CRITICAL: This is a LOOKALIKE/FAKE domain imitating ${analysisFeatures.lookalikeBrand} (${similarity}% visual similarity)`);
+      explanations.push(`⚠️ IMPERSONATION RISK: Designed to trick users into visiting a fake site instead of the real ${analysisFeatures.lookalikeBrand}`);
+    } else if (analysisFeatures.hasConfusableChars) {
+      explanations.push(`🔤 CRITICAL: Domain contains confusable characters (0/O, 1/l, etc.) - Homograph attack detected`);
     }
 
     if (analysisFeatures.subdomainCount > 4) {
