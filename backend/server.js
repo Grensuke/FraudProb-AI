@@ -157,6 +157,51 @@ const USER_REPORTED_PATTERNS = [
 ];
 
 // ============================================
+// ILLEGAL CONTENT DISTRIBUTION DETECTION
+// ============================================
+
+// Known piracy/torrent/illegal streaming site patterns
+const PIRACY_SITE_KEYWORDS = [
+  'movierulz', 'tamilrockers', 'isaimini', 'kuttymovies', '1337x',
+  'thepiratebay', 'kickass', 'rarbg', '123movies', 'putlocker',
+  'solarmovie', 'flixtor', 'popcorntime', 'stream', 'torrent',
+  'yify', 'eztv', 'extratorrent', 'extra-torrent', 'piratebay',
+  'kat.cr', 'kat-mirror', 'mvgroup', 'torrentz2', 'torrentz',
+  'zooqle', 'magnetdl', 'limetorrents', 'skytorrent', 'torrenting'
+];
+
+// Illegal download/streaming indicators
+const ILLEGAL_CONTENT_PATTERNS = [
+  'free-movies', 'watch-free', 'free-tv', 'free-shows',
+  'download-movies', 'download-tv', 'download-shows',
+  'hd-movies', 'full-movies', 'latest-movies', 'new-releases',
+  'bollywood-movies', 'hollywood-movies', 'tamil-movies', 'telugu-movies',
+  'hindi-movies', 'english-movies', 'movie-download', 'tv-download'
+];
+
+// Copyright infringement risk domains (common TLDs used for piracy)
+const PIRACY_RISK_INDICATORS = [
+  // Movies/TV shows
+  'movie', 'film', 'cinema', 'tvshow', 'series', 'episodes',
+  // Torrents
+  'torrent', 'magnet', 'seeds', 'peers', 'leech',
+  // Streaming
+  'stream', 'streaming', 'buffer', 'quality', 'resolution',
+  // Download
+  'download', 'dl', 'direct', 'link', 'mirror', 'proxy'
+];
+
+// Known illegal streaming domains from enforcement agencies
+const BLACKLISTED_PIRACY_DOMAINS = [
+  'movierulz.com', 'movierulz.net', 'movierulz.io', 'movierulz.wtf',
+  'tamilrockers.com', 'tamilrockers.ws', 'isaimini.com', 'isaimini.ws',
+  'kuttymovies.com', 'kuttymovies.ws', '1337x.to', '1337x.am',
+  'thepiratebay.org', 'thepiratebay.info', 'kickasstorrents.to',
+  'rarbgaccess.org', '123movies.is', '123movies.la', 'putlocker.is',
+  'solarmovies.so', 'flixtor.to', 'popcorntime.sh'
+];
+
+// ============================================
 // ENHANCED PHISHING PATTERN DETECTION
 // ============================================
 
@@ -289,7 +334,33 @@ function extractURLFeatures(url) {
     const hasRedirectChain = (pathname.match(/\//g) || []).length > 5 && urlLower.includes('redirect');
     const redirectChainScore = hasRedirectChain ? 0.2 : 0;
 
-    // ========== FEATURE 26: SCAM TYPE DETECTION ==========
+    // ========== FEATURE 26: ILLEGAL CONTENT DISTRIBUTION DETECTION ==========
+    // Check for known piracy sites and streaming patterns
+    let illegalContentScore = 0;
+    let isKnownPiracySite = false;
+    let hasIllegalIndicators = 0;
+
+    // Check blacklisted piracy domains
+    if (BLACKLISTED_PIRACY_DOMAINS.some(piracy => domain.includes(piracy.split('.')[0]))) {
+      illegalContentScore = 0.95; // CRITICAL - Known piracy site
+      isKnownPiracySite = true;
+    }
+    // Check piracy keyword patterns
+    else if (PIRACY_SITE_KEYWORDS.some(kw => urlLower.includes(kw))) {
+      illegalContentScore = Math.max(illegalContentScore, 0.85);
+    }
+    // Check for illegal content patterns (free movies, downloads, etc.)
+    if (ILLEGAL_CONTENT_PATTERNS.some(pattern => urlLower.includes(pattern))) {
+      hasIllegalIndicators++;
+      illegalContentScore = Math.max(illegalContentScore, 0.7);
+    }
+    // Check for torrent/streaming indicators
+    if (PIRACY_RISK_INDICATORS.some(indicator => urlLower.includes(indicator))) {
+      hasIllegalIndicators++;
+      illegalContentScore = Math.max(illegalContentScore, 0.65);
+    }
+
+    // ========== FEATURE 27: SCAM TYPE DETECTION ==========
     let scamTypeScore = 0;
     let detectedScamType = null;
     
@@ -324,7 +395,9 @@ function extractURLFeatures(url) {
       subdomainCount,
       pathDepth,
       detectedScamType,
-      internationalThreatMatch: internationalThreatScore > 0
+      internationalThreatMatch: internationalThreatScore > 0,
+      isKnownPiracySite,
+      hasIllegalContentIndicators: hasIllegalIndicators > 0
     };
 
     // ========== ADVANCED WEIGHTED SCORING ==========
@@ -332,7 +405,7 @@ function extractURLFeatures(url) {
       httpsScore * 0.18 +                // HTTPS: 18%
       selfSignedScore * 0.12 +           // Self-signed certs: 12%
       domainRepScore * 0.22 +            // Domain reputation: 22%
-      domainAgeScore * 0.2 +             // Domain age: 20% (INCREASED)
+      domainAgeScore * 0.2 +             // Domain age: 20%
       phishingScore * 0.4 +              // Phishing patterns: 40% (CRITICAL)
       securityThreatScore * 0.35 +       // Security threat language: 35%
       financialScore * 0.3 +             // Financial keywords: 30%
@@ -344,8 +417,9 @@ function extractURLFeatures(url) {
       specialCharScore * 0.15 +          // Special chars: 15%
       subdomainScore * 0.18 +            // Subdomains: 18%
       depthScore * 0.1 +                 // Path depth: 10%
-      scamTypeScore * 0.25               // Scam patterns: 25%
-    ) / 6.4; // Normalized weights
+      scamTypeScore * 0.25 +             // Scam patterns: 25%
+      illegalContentScore * 0.55         // ILLEGAL CONTENT: 55% (CRITICAL) ⭐ NEW
+    ) / 7.0; // Normalized weights (updated divisor)
 
     return {
       ...features,
@@ -367,27 +441,29 @@ function calculateAdvancedConfidence(features, baseScore) {
   if (features.phishingPatterns > 0) criticalIndicators += 2;
   if (features.hasAtSymbol) criticalIndicators += 2;
   if (features.securityThreatKeywords > 1) criticalIndicators += 1;
-  if (features.isRecentlyRegisteredIndicator) criticalIndicators += 1; // NEW
-  if (features.hasSuspiciousParams) criticalIndicators += 1; // NEW
+  if (features.isRecentlyRegisteredIndicator) criticalIndicators += 1;
+  if (features.hasSuspiciousParams) criticalIndicators += 1;
+  if (features.isKnownPiracySite) criticalIndicators += 3; // ⭐ NEW: Known piracy site = CRITICAL
   
   // Major indicators
   if (features.hasRedirect) riskIndicators += 2;
   if (features.isHomograph) riskIndicators += 2;
-  if (features.hasSuspiciousSubdomain) riskIndicators += 2; // NEW
-  if (features.hasRedirectChain) riskIndicators += 2; // NEW
+  if (features.hasSuspiciousSubdomain) riskIndicators += 2;
+  if (features.hasRedirectChain) riskIndicators += 2;
   if (features.urgencyKeywords > 1) riskIndicators += 1;
   if (features.financialKeywords > 0) riskIndicators += 1;
   if (!features.hasHTTPS) riskIndicators += 1;
   if (features.specialCharCount > 8) riskIndicators += 1;
   if (features.subdomainCount > 4) riskIndicators += 1;
-  if (features.internationalThreatMatch) riskIndicators += 1; // NEW
+  if (features.internationalThreatMatch) riskIndicators += 1;
+  if (features.hasIllegalContentIndicators) riskIndicators += 2; // ⭐ NEW: Illegal content indicators
 
   // Score-based confidence
-  if (criticalIndicators >= 5) return 'critical';
-  if (criticalIndicators >= 3 || (riskIndicators >= 6)) return 'very-high';
-  if (riskIndicators >= 5) return 'high';
-  if (riskIndicators >= 2) return 'medium';
-  if (riskIndicators >= 1) return 'low';
+  if (criticalIndicators >= 6) return 'critical';
+  if (criticalIndicators >= 4 || (riskIndicators >= 8)) return 'very-high';
+  if (criticalIndicators >= 3 || (riskIndicators >= 6)) return 'high';
+  if (riskIndicators >= 4) return 'medium';
+  if (riskIndicators >= 2) return 'low';
   return 'very-low';
 }
 
@@ -544,6 +620,13 @@ async function calculateRiskScore(url) {
 
     if (analysisFeatures.subdomainCount > 4) {
       explanations.push(`📎 Excessive subdomains (${analysisFeatures.subdomainCount} levels) - Suspicious nesting`);
+    }
+
+    // ⭐ Illegal content distribution detection
+    if (analysisFeatures.isKnownPiracySite) {
+      explanations.push(`🚫 ILLEGAL SITE: This is a known piracy/illegal content distribution website - Distributes copyrighted content illegally`);
+    } else if (analysisFeatures.hasIllegalContentIndicators) {
+      explanations.push(`⚖️ ILLEGAL CONTENT RISK: Site shows indicators of illegal content distribution (streaming/downloading copyrighted material)`);
     }
 
     // Scam type detection

@@ -22,6 +22,9 @@ export default function Home() {
     setResult(null);
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
       const response = await fetch(`${API_URL}/analyze`, {
         method: 'POST',
         headers: {
@@ -30,17 +33,26 @@ export default function Home() {
         body: JSON.stringify({
           url: input,
           message: input
-        })
+        }),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        throw new Error('Failed to analyze URL');
+        throw new Error(`Server error: ${response.status}`);
       }
 
       const data = await response.json();
       setResult(data);
     } catch (err) {
-      setError(err.message || 'An error occurred. Make sure the backend server is running.');
+      if (err.name === 'AbortError') {
+        setError('Request timeout (60s). Backend might be slow. Try again in a moment.');
+      } else if (err.message.includes('Failed to fetch')) {
+        setError('Cannot connect to backend. Check if server is running at ' + API_URL);
+      } else {
+        setError(err.message || 'An error occurred while analyzing.');
+      }
     } finally {
       setLoading(false);
     }
